@@ -30,7 +30,7 @@ namespace ImageUploader.Controllers
         {
             if (!Id.HasValue)
             {
-                return RedirectToAction("");
+                return RedirectToAction("Index");
             }
 
             var viewModel = await imageUploadService.GetImageAsync(Id.Value);
