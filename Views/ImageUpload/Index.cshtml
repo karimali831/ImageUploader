@@ -1,0 +1,27 @@
+﻿@model IEnumerable<ImageUploader.Models.ImageUpload>
+
+@{
+    ViewData["Title"] = "Uploaded Images";
+}
+
+@if (TempData["UploadResponnseMsg"] != null)
+{
+    <div class="alert alert-danger" role="alert">
+      @TempData["UploadResponnseMsg"]
+    </div>
+}
+
+<ul class="list-group">
+    @if (Model != null && Model.Any())
+    {
+        foreach (var file in Model)
+        {
+            <li class="list-group-item">
+                <img src="@file.UrlPath" width="50" height="50" />
+                Uploaded on @file.Created.ToString("dd/MM/yyyy HH:mm")
+                @Html.ActionLink("View", "View", new { Id = file.Id }) 
+            </li>
+        }
+    }
+    <li class="list-group-item">@Html.ActionLink("Upload New Image", "Upload")</li>
+</ul>
