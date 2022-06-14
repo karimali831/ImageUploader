@@ -1,5 +1,4 @@
-﻿using ImageUploader.Helper;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 
 namespace ImageUploader.ViewModels
@@ -11,7 +10,7 @@ namespace ImageUploader.ViewModels
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            var supportedFileTypes = new[] { ".jpg", ".png" };
+            var supportedFileTypes = new[] { ".jpg", ".png", ".jpeg" };
             var maxDimensions = (Width: 1024, Height: 1024);
             var image = ((ImageUploadVM)validationContext.ObjectInstance).File;
 

@@ -1,4 +1,4 @@
-﻿@model ImageUploader.Models.ImageUpload
+﻿@model ImageUploader.ViewModels.ImageVM
 
 @{
     ViewData["Title"] = "Image";
@@ -8,19 +8,19 @@
 
 @Html.ActionLink("View Images", "Index") 
 
-@if (TempData["UploadResponnseMsg"] != null)
+@if (TempData["UploadResponseMsg"] != null)
 {
     <div class="alert alert-success" role="alert">
-      @TempData["UploadResponnseMsg"]
+      @TempData["UploadResponseMsg"]
     </div>
 }
 
 <div class="card">
     <div class="card-header">
-        <h4>Uploaded on @Model.Created.ToString("dd/MM/yyyy HH:mm")</h4>
+        <h4>@Model.FileName uploaded on @Model.Created</h4>
     </div>
     <div class="card-body">
-        <img src="@Model.UrlPath" />
+        <img src="@Model.FilePath" />
     </div>
 </div>
 

@@ -6,7 +6,6 @@ namespace ImageUploader.Service
     public interface IBlobStorageService
     {
         Task<string> Upload(string fileName, byte[] fileData, string fileMimeType);
-
     }
 
     public class BlobStorageService : IBlobStorageService
@@ -16,7 +15,7 @@ namespace ImageUploader.Service
 
         public BlobStorageService(IConfigHelper config)
         {
-            this.config = config;
+            this.config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public async Task<string> Upload(string fileName, byte[] fileData, string fileMimeType)

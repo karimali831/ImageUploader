@@ -6,12 +6,10 @@ namespace ImageUploader.Controllers
 {
     public class ImageUploadController : Controller
     {
-        private readonly IWebHostEnvironment _env;
         private readonly IImageUploadService imageUploadService;
 
-        public ImageUploadController(IImageUploadService imageUploadService, IWebHostEnvironment env)
+        public ImageUploadController(IImageUploadService imageUploadService)
         {
-            _env = env;
             this.imageUploadService = imageUploadService ?? throw new ArgumentNullException(nameof(imageUploadService));
         }
 
@@ -22,19 +20,22 @@ namespace ImageUploader.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var viewModel = await imageUploadService.GetAllImagesAsync();
+            var getImages = await imageUploadService.GetAllImagesAsync();
+            var viewModel = getImages.Select(image => ImageVM.MapFrom(image));
+
             return View(viewModel);
         }
 
-        public async Task<IActionResult> View(Guid? Id)
+        public async Task<IActionResult> View(Guid Id)
         {
-            if (!Id.HasValue)
+            var getImage = await imageUploadService.GetImageAsync(Id);
+
+            if (getImage == null)
             {
-                return RedirectToAction("Index");
+                return NotFound();
             }
 
-            var viewModel = await imageUploadService.GetImageAsync(Id.Value);
-            return View(viewModel);
+            return View(ImageVM.MapFrom(getImage));
         }
 
         [HttpPost]
@@ -43,17 +44,17 @@ namespace ImageUploader.Controllers
         {
             if (ModelState.IsValid)
             {
-                var imageId = await imageUploadService.UploadImageAsync(image);
+                var imageId = await imageUploadService.UploadImageAsync(image.File);
 
                 if (imageId.HasValue && imageId.Value != Guid.Empty)
                 {
-                    TempData["UploadResponnseMsg"] = "Image uploaded successfully";
+                    TempData["UploadResponseMsg"] = "Image uploaded successfully";
                     return RedirectToAction(nameof(View), new { Id = imageId });
                 }
                 else
                 {
-                    TempData["UploadResponnseMsg"] = "An error occured";
-                    return RedirectToAction(nameof(Index), new { Id = imageId });
+                    TempData["UploadResponseMsg"] = "An error occured";
+                    return RedirectToAction(nameof(Index));
 
                 }
             }

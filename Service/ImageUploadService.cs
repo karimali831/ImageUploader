@@ -1,8 +1,6 @@
-﻿using Azure.Storage.Blobs;
-using ImageUploader.Helper;
+﻿using ImageUploader.Helper;
 using ImageUploader.Models;
 using ImageUploader.Repository;
-using ImageUploader.ViewModels;
 
 namespace ImageUploader.Service
 {
@@ -10,87 +8,101 @@ namespace ImageUploader.Service
     {
         Task<ImageUpload> GetImageAsync(Guid Id);
         Task<IEnumerable<ImageUpload>> GetAllImagesAsync();
-        Task<Guid?> UploadImageAsync(ImageUploadVM image);
+        Task<Guid?> UploadImageAsync(IFormFile imageFile);
     }
 
     public class ImageUploadService : IImageUploadService
     {
         private readonly IImageUploadRepository imageUploadRepository;
-        private readonly IWebHostEnvironment webHostEnvironment;
         private readonly IBlobStorageService blobStorageService;
-
+        private readonly IWebHostEnvironment webHostEnvironment;
+        private readonly IConfigHelper configHelper;
 
         public ImageUploadService(
             IImageUploadRepository imageUploadRepository,
+            IBlobStorageService blobStorageService,
             IWebHostEnvironment webHostEnvironment,
-            IBlobStorageService blobStorageService)
+            IConfigHelper configHelper)
         {
             this.imageUploadRepository = imageUploadRepository ?? throw new ArgumentNullException(nameof(imageUploadRepository));
-            this.webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
             this.blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+            this.webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
+            this.configHelper = configHelper ?? throw new ArgumentNullException(nameof(configHelper));
         }
+
+        private string GetFilePath(string urlPath, string fileName) => urlPath ?? $"/{configHelper.LocalImageUploadDir}/{fileName}";
 
         public async Task<ImageUpload> GetImageAsync(Guid Id)
         {
-            return await imageUploadRepository.GetImageAsync(Id);
+            var image = await imageUploadRepository.GetImageAsync(Id);
+            image.FilePath = GetFilePath(image.UrlPath, image.FileName);
+
+            return image;
         }
 
         public async Task<IEnumerable<ImageUpload>> GetAllImagesAsync()
         {
-            return (await imageUploadRepository.GetAllImagesAsync()) ?? Enumerable.Empty<ImageUpload>();
+            return (await imageUploadRepository.GetAllImagesAsync())
+                .Select(image =>
+                {
+                    image.FilePath = GetFilePath(image.UrlPath, image.FileName);
+                    return image;
+                }) ?? Enumerable.Empty<ImageUpload>();
         }
 
-        public async Task<Guid?> UploadImageAsync(ImageUploadVM image)
+        public async Task<Guid?> UploadImageAsync(IFormFile imageFile)
         {
             byte[] fileData;
             using (var target = new MemoryStream())
             {
-                image.File.CopyTo(target);
+                imageFile.CopyTo(target);
                 fileData = target.ToArray();
             }
 
-            string urlPath = await blobStorageService.Upload(image.File.FileName, fileData, image.File.ContentType);
+            string urlPath = await blobStorageService.Upload(imageFile.FileName, fileData, imageFile.ContentType);
 
             if (urlPath == null) {
-                urlPath = await UploadLocalFile(image.File.FileName);
+                await Upload(imageFile);
             }
 
-            if (urlPath != null)
+            var model = new ImageUpload
             {
-                var model = new ImageUpload
-                {
-                    Id = Guid.NewGuid(),
-                    FileData = fileData,
-                    MimeType = image.File.ContentType,
-                    UrlPath = urlPath,
-                    Created = DateTime.UtcNow
-                };
+                Id = Guid.NewGuid(),
+                FileName = imageFile.FileName,
+                FileData = fileData,
+                UrlPath = urlPath,
+                MimeType = imageFile.ContentType,
+                Created = DateTime.UtcNow
+            };
 
-                if (await imageUploadRepository.UploadImageAsync(model))
-                {
-                    return model.Id;
-                }
+            if (await imageUploadRepository.UploadImageAsync(model))
+            {
+                return model.Id;
             }
-
+            
             return null;
         }
 
-        private async Task<string> UploadLocalFile(string fileName)
+        private async Task Upload(IFormFile imageFile)
         {
-
-            string localFolder = Path.Combine(webHostEnvironment.WebRootPath, "media");
-            string filePath = Path.Combine(localFolder, fileName);
-
-            if (!Directory.Exists(localFolder))
-                Directory.CreateDirectory(localFolder);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                stream.Position = 0;
-                await stream.CopyToAsync(stream);
-            }
+                string localFolder = Path.Combine(webHostEnvironment.WebRootPath, configHelper.LocalImageUploadDir);
+                string filePath = Path.Combine(localFolder, imageFile.FileName);
 
-            return filePath;
+                if (!Directory.Exists(localFolder))
+                    Directory.CreateDirectory(localFolder);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
         }
     }
 }

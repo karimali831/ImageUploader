@@ -1,13 +1,13 @@
-﻿@model IEnumerable<ImageUploader.Models.ImageUpload>
+﻿@model IEnumerable<ImageUploader.ViewModels.ImageVM>
 
 @{
     ViewData["Title"] = "Uploaded Images";
 }
 
-@if (TempData["UploadResponnseMsg"] != null)
+@if (TempData["UploadResponseMsg"] != null)
 {
     <div class="alert alert-danger" role="alert">
-      @TempData["UploadResponnseMsg"]
+      @TempData["UploadResponseMsg"]
     </div>
 }
 
@@ -17,8 +17,8 @@
         foreach (var file in Model)
         {
             <li class="list-group-item">
-                <img src="@file.UrlPath" width="50" height="50" />
-                Uploaded on @file.Created.ToString("dd/MM/yyyy HH:mm")
+                <img src="@file.FilePath"  width="50" height="50" />
+                @file.FileName uploaded on @file.Created
                 @Html.ActionLink("View", "View", new { Id = file.Id }) 
             </li>
         }
